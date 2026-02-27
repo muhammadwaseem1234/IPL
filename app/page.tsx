@@ -259,15 +259,6 @@ export default function Home() {
               <p className="text-xs text-orange-400 font-semibold tracking-widest">SIMULATOR</p>
             </div>
           </div>
-          
-          <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Features</a>
-            <a href="#teams" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Teams</a>
-            <a href="#about" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">About</a>
-            <button className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-pink-600 rounded-full text-sm font-semibold text-white shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:scale-105 transition-all">
-              Sign In
-            </button>
-          </div>
         </div>
       </nav>
 
