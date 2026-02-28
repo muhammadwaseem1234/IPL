@@ -534,7 +534,23 @@ export async function assignPlayerToWinner(): Promise<ActionResult> {
 export async function nextPlayer(): Promise<ActionResult<AuctionStateRecord>> {
   try {
     const supabase = getSupabaseServerClient();
-    const state = await getOrCreateAuctionState();
+    let state = await getOrCreateAuctionState();
+
+    if (
+      state.current_player_id &&
+      state.current_leader_device_id &&
+      state.status !== "assigned"
+    ) {
+      const assignmentResult = await assignPlayerToWinner();
+      if (!assignmentResult.ok) {
+        return {
+          ok: false,
+          message: assignmentResult.message,
+        };
+      }
+      state = await getOrCreateAuctionState();
+    }
+
     const next = await getNextUnsoldPlayer(state.current_player_id);
 
     if (!next) {

@@ -78,7 +78,7 @@ export default function AdminPage() {
     { label: "Start", action: "start" },
     { label: "Pause", action: "pause" },
     { label: "Resume", action: "resume" },
-    { label: "Stop", action: "stop" },
+    { label: "Stop/Assign", action: "stop" },
     { label: "Next Player", action: "next" },
     { label: "Reset", action: "reset" },
     { label: "Evaluate", action: "evaluate" },
