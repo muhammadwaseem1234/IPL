@@ -31,7 +31,9 @@ export default function PlayerBasePage() {
     if (!term) return allPlayers;
     return allPlayers.filter(
       (player) =>
-        player.name.toLowerCase().includes(term) || player.role.toLowerCase().includes(term),
+        player.name.toLowerCase().includes(term) ||
+        player.role.toLowerCase().includes(term) ||
+        (player.category ?? "").toLowerCase().includes(term),
     );
   }, [snapshot?.players, query]);
 
@@ -91,6 +93,7 @@ export default function PlayerBasePage() {
               <tr className="text-left text-slate-400 border-b border-white/10">
                 <th className="py-2 pr-3">Name</th>
                 <th className="py-2 pr-3">Role</th>
+                <th className="py-2 pr-3">Category</th>
                 <th className="py-2 pr-3">Base Price</th>
                 <th className="py-2 pr-3">AIS</th>
                 <th className="py-2 pr-3">BAT</th>
@@ -104,6 +107,11 @@ export default function PlayerBasePage() {
                 <tr key={player.id} className="border-b border-white/5">
                   <td className="py-2 pr-3">{player.name}</td>
                   <td className="py-2 pr-3">{player.role}</td>
+                  <td className="py-2 pr-3">
+                    <span className="inline-flex px-2 py-1 rounded-full text-[11px] font-semibold bg-white/10 border border-white/20 text-slate-200">
+                      {player.category ?? "Uncategorized"}
+                    </span>
+                  </td>
                   <td className="py-2 pr-3">{player.base_price}</td>
                   <td className="py-2 pr-3">{player.ais}</td>
                   <td className="py-2 pr-3">{player.batting}</td>

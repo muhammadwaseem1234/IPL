@@ -36,13 +36,13 @@ export async function GET() {
     supabase
       .from("squads")
       .select(
-        "id, franchise, player_id, price, players:player_id (id, name, nationality, role, ais, image_path)",
+        "id, franchise, player_id, price, players:player_id (id, name, nationality, category, role, ais, image_path)",
       )
       .order("franchise", { ascending: true }),
     supabase
       .from("players")
       .select(
-        "id, name, nationality, role, base_price, ais, batting, bowling, fielding, leadership, image_path",
+        "id, name, nationality, category, role, base_price, ais, batting, bowling, fielding, leadership, image_path",
       )
       .order("name", { ascending: true }),
     supabase.from("evaluation_results").select("*").order("final_score", { ascending: false }),

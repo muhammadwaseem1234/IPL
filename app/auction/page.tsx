@@ -4,8 +4,24 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 
 import { useAuctionData } from "@/hooks/useAuctionData";
+import { MAX_SQUAD_SIZE } from "@/lib/constants";
 import { ensureDeviceRegistration, type DeviceSession } from "@/lib/deviceGuard";
 import { postAuctionAction } from "@/lib/auctionClient";
+
+function categoryBadgeClasses(category: string | null | undefined): string {
+  switch (category) {
+    case "Legendary":
+      return "bg-amber-500/20 text-amber-300 border border-amber-400/40";
+    case "Elite":
+      return "bg-cyan-500/20 text-cyan-300 border border-cyan-400/40";
+    case "Veteran":
+      return "bg-violet-500/20 text-violet-300 border border-violet-400/40";
+    case "Rising Star":
+      return "bg-emerald-500/20 text-emerald-300 border border-emerald-400/40";
+    default:
+      return "bg-white/10 text-slate-300 border border-white/20";
+  }
+}
 
 export default function AuctionPage() {
   const { snapshot, loading, error, refresh, realtimeConnected } = useAuctionData();
@@ -135,6 +151,13 @@ export default function AuctionPage() {
                     <p className="text-slate-300 text-sm">
                       {currentPlayer.role} | AIS {currentPlayer.ais}
                     </p>
+                    <span
+                      className={`inline-flex mt-2 px-2 py-1 rounded-full text-[11px] font-semibold ${categoryBadgeClasses(
+                        currentPlayer.category,
+                      )}`}
+                    >
+                      {currentPlayer.category ?? "Uncategorized"}
+                    </span>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -189,7 +212,9 @@ export default function AuctionPage() {
         <section className="feature-card">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-2xl font-display">Current Squad</h2>
-            <p className="text-slate-300 text-sm">Purse: {myTeam?.purse ?? 0} Cr</p>
+            <p className="text-slate-300 text-sm">
+              Purse: {myTeam?.purse ?? 0} Cr | Players: {mySquad.length}/{MAX_SQUAD_SIZE}
+            </p>
           </div>
           <div className="grid gap-2 md:grid-cols-2">
             {mySquad.length === 0 ? <p className="text-slate-400">No players acquired yet.</p> : null}
@@ -199,6 +224,13 @@ export default function AuctionPage() {
                 <p className="text-slate-400 text-sm">
                   {entry.players?.role ?? "-"} | Price {entry.price} Cr
                 </p>
+                <span
+                  className={`inline-flex mt-2 px-2 py-1 rounded-full text-[11px] font-semibold ${categoryBadgeClasses(
+                    entry.players?.category,
+                  )}`}
+                >
+                  {entry.players?.category ?? "Uncategorized"}
+                </span>
               </div>
             ))}
           </div>

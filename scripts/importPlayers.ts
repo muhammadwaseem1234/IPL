@@ -6,6 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 type PlayerInsert = {
   name: string;
   nationality: string | null;
+  category: string | null;
   role: string;
   base_price: number;
   ais: number;
@@ -139,6 +140,7 @@ async function buildImageMap(playerPicsDir: string): Promise<Map<string, string>
 
 async function resolveDefaultCsvPath(): Promise<string> {
   const candidates = [
+    path.resolve(process.cwd(), "../cricket_players_with_categories.csv"),
     path.resolve(process.cwd(), "../IPL_Player_Ratings_with_Nationality.csv"),
     path.resolve(process.cwd(), "../creadit score (1).csv"),
   ];
@@ -153,7 +155,7 @@ async function resolveDefaultCsvPath(): Promise<string> {
   }
 
   throw new Error(
-    "No default CSV found. Pass a path: npm run import:players -- \"..\\IPL_Player_Ratings_with_Nationality.csv\"",
+    "No default CSV found. Pass a path: npm run import:players -- \"..\\cricket_players_with_categories.csv\"",
   );
 }
 
@@ -225,6 +227,8 @@ async function main() {
 
     const nationality =
       cleanText(getColumn(cols, indexByHeader, ["nationality"], [2])) || null;
+    const category =
+      cleanText(getColumn(cols, indexByHeader, ["category"], [10])) || null;
     const batting = toNumber(getColumn(cols, indexByHeader, ["batting40", "batting"], [3]));
     const bowling = toNumber(getColumn(cols, indexByHeader, ["bowling40", "bowling"], [5]));
     const fielding = toNumber(getColumn(cols, indexByHeader, ["fielding10", "fielding"], [7]));
@@ -243,6 +247,7 @@ async function main() {
     playersByName.set(name, {
       name,
       nationality,
+      category,
       role,
       base_price: estimateBasePrice(ais, ovr),
       ais,

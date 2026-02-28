@@ -16,6 +16,7 @@ export type PlayerRecord = {
   id: string;
   name: string;
   nationality: string | null;
+  category: string | null;
   role: string;
   base_price: number;
   ais: number;

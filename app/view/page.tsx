@@ -75,6 +75,7 @@ interface PlayerCardProps {
   player: {
     name: string;
     nationality?: string | null;
+    category?: string | null;
     role: string;
     base_price: number;
     ais: number;
@@ -171,6 +172,9 @@ function PlayerCard({ player, currentBid }: PlayerCardProps) {
                   style={{ background: `${theme.accent}22`, color: theme.accent, border: `1px solid ${theme.accent}44` }}
                 >
                   {player.role}
+                </span>
+                <span className="text-[10px] uppercase tracking-[0.2em] px-2 py-0.5 rounded-full font-semibold bg-white/10 text-white/80 border border-white/20">
+                  {player.category ?? "Uncategorized"}
                 </span>
                 {player.nationality && (
                   <span className="text-[10px] uppercase tracking-widest text-white/40">
@@ -408,6 +412,9 @@ export default function ViewPage() {
                               <span style={{ color: t.accent }}>({entry.price} Cr)</span>
                             </p>
                             <p className="text-xs text-white/40">{entry.players?.nationality ?? "Unknown"}</p>
+                            <span className="inline-flex mt-1 px-2 py-0.5 rounded-full text-[10px] uppercase tracking-[0.15em] font-semibold bg-white/10 text-white/80 border border-white/20">
+                              {entry.players?.category ?? "Uncategorized"}
+                            </span>
                           </div>
                         </div>
                       );

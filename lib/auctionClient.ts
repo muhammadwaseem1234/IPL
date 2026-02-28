@@ -6,6 +6,7 @@ export type SnapshotPlayer = {
   id: string;
   name: string;
   nationality: string | null;
+  category: string | null;
   role: string;
   base_price: number;
   ais: number;
@@ -42,6 +43,7 @@ export type SnapshotSquad = {
     id: string;
     name: string;
     nationality: string | null;
+    category: string | null;
     role: string;
     ais: number;
     image_path: string | null;

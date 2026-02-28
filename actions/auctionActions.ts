@@ -4,6 +4,7 @@ import {
   AUCTION_BID_TIMER_SECONDS,
   AUCTION_START_TIMER_SECONDS,
   FRANCHISES,
+  MAX_SQUAD_SIZE,
   TEAM_PURSE_CR,
 } from "@/lib/constants";
 import type { Franchise } from "@/lib/constants";
@@ -49,6 +50,10 @@ type SquadPlayerJoin = {
     | null;
 };
 
+type SquadCountRow = {
+  franchise: Franchise;
+};
+
 type EvalRow = {
   franchise: Franchise;
   base_score: number;
@@ -85,6 +90,15 @@ function normalizeRole(role: string): "WK" | "BAT" | "BOWL" | "AR" {
 
 function addSeconds(base: Date, seconds: number): string {
   return new Date(base.getTime() + seconds * 1000).toISOString();
+}
+
+async function getFranchiseSquadCount(franchise: Franchise): Promise<number> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase.from("squads").select("franchise").eq("franchise", franchise);
+  if (error) {
+    throw new Error(error.message);
+  }
+  return (data as SquadCountRow[] | null)?.length ?? 0;
 }
 
 async function getServerNow(): Promise<Date> {
@@ -145,7 +159,7 @@ async function getNextUnsoldPlayer(currentPlayerId?: string | null): Promise<Pla
       supabase
         .from("players")
         .select(
-          "id, name, nationality, role, base_price, ais, batting, bowling, fielding, leadership, image_path",
+          "id, name, nationality, category, role, base_price, ais, batting, bowling, fielding, leadership, image_path",
         )
         .order("name", { ascending: true }),
       supabase.from("squads").select("player_id"),
@@ -334,6 +348,11 @@ export async function placeBid(device_id: string, amount: number): Promise<Actio
       throw new Error("Insufficient purse for this bid.");
     }
 
+    const currentSquadSize = await getFranchiseSquadCount(typedTeam.franchise);
+    if (currentSquadSize >= MAX_SQUAD_SIZE) {
+      throw new Error(`Squad limit reached (${MAX_SQUAD_SIZE} players).`);
+    }
+
     const { error: bidError } = await supabase.from("bids").insert({
       player_id: state.current_player_id,
       device_id,
@@ -484,6 +503,11 @@ export async function assignPlayerToWinner(): Promise<ActionResult> {
     const finalPrice = asNumber(state.current_bid);
     if (purse < finalPrice) {
       throw new Error("Winning team purse is insufficient for assignment.");
+    }
+
+    const currentSquadSize = await getFranchiseSquadCount(typedLeader.franchise);
+    if (currentSquadSize >= MAX_SQUAD_SIZE) {
+      throw new Error(`Winning team has reached max squad size (${MAX_SQUAD_SIZE}).`);
     }
 
     const { error: squadInsertError } = await supabase.from("squads").insert({
@@ -702,77 +726,76 @@ export async function computeEvaluationResults(): Promise<ActionResult<EvalRow[]
 
       const selected: Array<(typeof players)[number]> = [];
       const selectedIds = new Set<string>();
-      let penalties = 0;
 
-      const mandatory: Array<{ role: keyof typeof byRole; count: number }> = [
-        { role: "WK", count: 1 },
-        { role: "BAT", count: 3 },
-        { role: "BOWL", count: 3 },
-        { role: "AR", count: 1 },
-      ];
-
-      for (const item of mandatory) {
-        const pool = byRole[item.role].filter((player) => !selectedIds.has(player.id));
-        const picked = pool.slice(0, item.count);
-
+      const pickTop = (pool: Array<(typeof players)[number]>, count: number) => {
+        const picked = pool.filter((player) => !selectedIds.has(player.id)).slice(0, count);
         picked.forEach((player) => {
           selected.push(player);
           selectedIds.add(player.id);
         });
+        return picked.length;
+      };
 
-        const missing = item.count - picked.length;
-        if (missing > 0) {
-          penalties += missing * 10;
-        }
+      const pickedWk = pickTop(byRole.WK, 1);
+      const pickedBat = pickTop(byRole.BAT, 3);
+      const pickedBowl = pickTop(byRole.BOWL, 3);
+
+      // Prefer at least one AR when available; otherwise take best remaining specialist.
+      const pickedAr = pickTop(byRole.AR, 1);
+      if (pickedAr === 0) {
+        const specialists = players.filter(
+          (player) => player.normalizedRole !== "AR" && !selectedIds.has(player.id),
+        );
+        pickTop(specialists, 1);
       }
 
       const remainingSlots = 11 - selected.length;
       if (remainingSlots > 0) {
-        const filler = players.filter((player) => !selectedIds.has(player.id)).slice(0, remainingSlots);
-        filler.forEach((player) => {
-          selected.push(player);
-          selectedIds.add(player.id);
-        });
-      }
-
-      const totalMissingForXI = 11 - selected.length;
-      if (totalMissingForXI > 0) {
-        penalties += totalMissingForXI * 8;
+        pickTop(players, remainingSlots);
       }
 
       const baseScore = round2(selected.reduce((sum, player) => sum + player.ais, 0));
+      const squadSize = players.length;
 
-      let balanceBonus = 0;
-      if (byRole.WK.length >= 2) balanceBonus += 3;
-      if (byRole.BAT.length >= 5) balanceBonus += 3;
-      if (byRole.BOWL.length >= 5) balanceBonus += 3;
-      if (byRole.AR.length >= 3) balanceBonus += 3;
-
-      const purse = purseByFranchise.get(franchise) ?? TEAM_PURSE_CR;
-      const spent = round2(TEAM_PURSE_CR - purse);
-
-      let budgetBonus = 0;
-      if (spent >= 85 && spent <= TEAM_PURSE_CR) budgetBonus = 10;
-      else if (spent >= 75) budgetBonus = 6;
-      else if (spent > 0) budgetBonus = 3;
-
-      if (spent > TEAM_PURSE_CR) {
-        penalties += round2((spent - TEAM_PURSE_CR) * 5);
+      let squadBalanceBonus = 0;
+      if (squadSize >= 11 && squadSize <= 13) {
+        squadBalanceBonus += 10;
+      } else if (squadSize >= 14 && squadSize <= MAX_SQUAD_SIZE) {
+        squadBalanceBonus += 15;
+      }
+      if (byRole.AR.length >= 2) {
+        squadBalanceBonus += 10;
+      }
+      const balancedRoleDistribution =
+        byRole.WK.length >= 1 && byRole.BAT.length >= 3 && byRole.BOWL.length >= 3 && byRole.AR.length >= 1;
+      if (balancedRoleDistribution) {
+        squadBalanceBonus += 10;
       }
 
-      if (players.length < 18) {
-        penalties += (18 - players.length) * 2;
+      const unusedBudget = purseByFranchise.get(franchise) ?? TEAM_PURSE_CR;
+      const budgetEfficiencyBonus = round2(Math.min(50, Math.max(0, (unusedBudget / 70) * 50)));
+
+      let penalties = 0;
+      if (squadSize === 11) {
+        penalties += 5;
       }
 
-      const bonus = round2(balanceBonus + budgetBonus);
-      const efficiency = spent > 0 ? round2((baseScore / spent) * 10) : 0;
-      const finalScore = round2(baseScore + bonus + efficiency - penalties);
+      const roleImbalance = pickedWk < 1 || pickedBat < 3 || pickedBowl < 3 || selected.length < 11;
+      if (roleImbalance) {
+        penalties += 10;
+      }
+
+      if (unusedBudget < 1) {
+        penalties += 5;
+      }
+
+      const finalScore = round2(baseScore + squadBalanceBonus + budgetEfficiencyBonus - penalties);
 
       results.push({
         franchise,
         base_score: baseScore,
-        bonus,
-        efficiency,
+        bonus: round2(squadBalanceBonus),
+        efficiency: budgetEfficiencyBonus,
         penalties: round2(penalties),
         final_score: finalScore,
       });

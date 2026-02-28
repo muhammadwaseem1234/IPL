@@ -20,3 +20,5 @@ export const TEAM_PURSE_CR = 90;
 export const AUCTION_START_TIMER_SECONDS = 30;
 
 export const AUCTION_BID_TIMER_SECONDS = 15;
+
+export const MAX_SQUAD_SIZE = 15;
